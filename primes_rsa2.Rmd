@@ -1,0 +1,157 @@
+---
+title: 'Assignment: Due Monday, 11:59pm'
+author: "Jared Wada"
+date: "October 2, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+library(gmp)
+```
+
+## 1. Factoring $pq$ when $p$ and $q$ are nearby primes.
+
+Consider the following (composite) number.
+
+```{r}
+library(cryptoJKAW)
+bigComp <- as.bigz("41495155688809929585124078636911611510124462322424
+                   368999956573296906528114129081463997081530206029675
+                   796566441088639070653584409712811422453347196222375
+                   13761725653531896260925123613")
+FermatTest(bigComp, as.bigz("234234"))
+log10.bigz(bigComp) #number of digits (remove decimal numbers)
+log2.bigz(bigComp) #number of bits (remove decimal numbers)
+```
+
+a. In the codeblock above, check that this number is composite by using your Fermat test.
+b. In the codeblock above, find the number of digits in this number and the number of bits using logs.
+c. Notice that the square of the following number is close to `bigComp`.  Use this information, and the fact that the factors of `bigComp` are approximately the same size, to factor `bigComp`. Show your code in the codeblock below.
+   
+```{r}
+sqRoot <- as.bigz("203703597633448608626844568840937816105146839366593
+                  6250636140449354381299763336706183397647")
+stwo <- mul.bigz(sqRoot, sqRoot)
+sub.bigz(stwo, bigComp) #square root of this is 114
+n <- mul.bigz(sub.bigz(sqRoot, 114), add.bigz(sqRoot, 114))
+n == bigComp
+```
+
+## 2. Find a pseudoprime that is not strong
+
+Use your Fermat primality test to find all of the pseudoprimes between 1000 and 10000 for the base 7. Use the `isprime` function to determine that your pseudoprimes are composite.
+
+```{r}
+# Put your code for this problem here
+for(i in 1000:10000){
+  if(FermatTest(i, 7)){
+    if(isprime(i) == F){
+      cat(sprintf("%d is a pseudoprime\n", i))
+    }
+  }
+}
+```
+
+
+## 3. Quick power calculation
+
+Let $a$ be an integer. Suppose you have a calculator that can only perform the operations of squaring and multiplying. Show (using algebra) that you can calculate $a^{257}$ using only five calculator operations.
+
+$$ a\times a = a^2$$
+$$ (a^2)^2 = a^4$$
+$$ (a^4)^2 = a^8$$
+$$ (a^8)^2 = a^{16}$$
+$$ (a^{16})^2 = a^{32}$$
+$$ (a^{32})^2 = a^{64}$$
+$$ (a^{64})^2 = a^{128}$$
+$$ (a^{128})^2 = a^{256}$$
+$$ a^{256} * a = a^{257}$$
+
+## 4. Timing the `factorize` function
+
+The `gmp` library has a function called `factorize` which will attempt to factor a large number. In R, you can see how long a command takes by using the `system_time` function:
+
+```{r}
+system.time(factorize(as.bigz("74534598735433245597")))
+
+system.time(factorize(as.bigz("221073920338411049151031")))
+system.time(factorize(as.bigz("1326443525118841866260617")))
+system.time(factorize(as.bigz("7958661137742004364881321")))
+system.time(factorize(as.bigz("47751966754183036233218137")))
+system.time(factorize(as.bigz("286511800375000558445327027")))
+system.time(factorize(as.bigz("1719070802400095237189887909")))
+system.time(factorize(as.bigz("10314424803143471989157992487")))
+system.time(factorize(as.bigz("371319292755115219695668554559")))
+```
+
+Use this command to determine the time it takes to factor the following numbers, each of which is a product of large primes. Are these times increasing linearly with the number of digits? If not, how are these times increasing?
+
+```
+221073920338411049151031, 1326443525118841866260617, 
+7958661137742004364881321, 47751966754183036233218137, 
+286511800375000558445327027, 1719070802400095237189887909,
+10314424803143471989157992487,
+371319292755115219695668554559
+```
+
+\begin{center} No, it doesn't seem to be increasing linearly according to the number of digits. \n
+I can't find a reasonable relationship between the numbers. It seemed to grow slightly, or shrink slighty, and then at the end grew exponentially\end{center}
+
+## 5. Short plaintext attack
+
+```{r}
+rsaMod <- as.bigz("2270785812851607857752236173866598165780980999480087
+                  96470995669001062758570837819275351571519690240251463
+                  92877047548296429131296960565225703131554564424303895
+                  83920197030931790925387823837277203838574301774350132
+                  42444504076066258379017983988851994235746436107443245
+                  62528276931827066473866615454887905670524424503707688
+                  92681879411999393643108663016006507255489833947310000
+                  87923251226854295095181659541311283989229588168697957
+                  58667406044391829713985703446445013454864090920545268
+                  59941485219860927547608296980025433657621871715162467
+                  84071119823459209996599672653802424029963364148197234
+                  56853027238543378738028207982298417")
+rsaExp <- as.bigz("65537")
+c <- as.bigz("128216972055960183378721787714469111306799737814971002198
+             6229586389359344497658184213712429285822188549926995588183
+             3237258784376795565986432565955032055406700435350884952772
+             8327573356968001432140335916137748548203476259553293133733
+             6984514346587698999980727268439793304759211907286227159763
+             8991440842731415663378367587187983360075334687571117158156
+             7251718603971567669618892639720277733050807370950305289557
+             6032600301346639961168091352569266230799971665474413926527
+             4217957686818400851397262197048091402851157186436667777674
+             1004576470040519183572125063272357752504338431403925758867
+             97119952853745267282047381070641950241")
+
+x <- list()
+y <- list()
+
+# The book said to take 10^9 numbers and check them, which was taking forever to compile. 
+# This code is likely similar to Chris'(and anyone he may have helped) as he pointed me towards the intersect method
+# after many failed attempts with for loops and sapplys.
+
+for(i in 1:(10**9)){
+  x[[i]] <- (c*powm(i, -rsaExp, rsaMod))
+  y[[i]] <- powm(i, rsaExp, rsaMod)
+  if(length(intersect(x,y)) == 1){
+    xpos <- match(intersect(x,y), x)[[1]]
+    print(xpos)
+    ypos <- match(intersect(x,y), y)[[1]]
+    print(ypos)
+    print((xpos*ypos)%%rsaMod)
+    print(bigzToString((xpos*ypos) %% rsaMod))
+    break
+  }
+}
+
+
+```
+
+In the code block above, conduct a short plaintext attack to find the plaintext that produced the ciphertext `c`. (Follow the procedure on page 172 of [T].)
+
+
+

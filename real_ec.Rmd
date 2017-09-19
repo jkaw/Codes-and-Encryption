@@ -1,0 +1,158 @@
+---
+title: 'Assignment: Real Elliptic Curves, Due Monday, 11:59pm'
+author: "Jared Wada"
+date: "October 31, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+library(gmp)
+library(openssl)
+library(cryptoJKAW)
+```
+
+## 1. Repeated "exponentiation"
+
+Consider the point $P = (2,1)$ on the real elliptic curve $y^2=x^3-3x-1$. Plot the points $nP$ for $n=1,2,\ldots,100$. Is there a pattern? (The first point is plotted for you. Note that the first two arguments to the `points` command are a vector of $x$-coordinates and a vector of $y$-coordinates.)
+
+```{r}
+x<-seq(-5,10,length=1000)
+y<-seq(-20,20,length=1000)
+z<-outer(x,y,function(x,y) -y^2  + x^3 - 3*x - 1) 
+contour(x,y,z,levels=0, labels="", labcex=0.1)
+point <- c(2, 1)
+xpoints <- vector()
+ypoints <- vector()
+points(c(2), c(1))
+for(i in 1:100){
+  p <- ecPowReal(-3, -1, c(2, 1), i)
+  xpoints[i] <- p[1]
+  ypoints[i] <- p[2]
+  
+}
+points(xpoints, ypoints) 
+```
+
+Notice that the points $nP$ lie on only one component of this curve. Find a point $Q$ on this curve so the the points $nQ$ span both components. Illustrate the points $nQ$ below for $n = 1,2, \ldots, 20$. For which values of $n$ is $nQ$ on the infinite component?
+
+```{r}
+x<-seq(-5,10,length=1000)
+y<-seq(-20,20,length=1000)
+z<-outer(x,y,function(x,y) -y^2  + x^3 - 3*x - 1) 
+contour(x,y,z,levels=0, labels="", labcex=0.1)
+x2 <- vector()
+y2 <- vector()
+for(i in 1:20) {
+  a <- ecPowReal(-3, -1, c(-1, 1), i)
+  x2[i] <- a[1]
+  y2[i] <- a[2]
+  if(x2[i] > 0){
+    cat(i, " is on the infinite component\n")
+  }
+  }
+points(x2, y2)
+```
+
+Now make two new graphs by repeating the code that made the two graphs above, except replace the `points` command with the `lines` command. What do you observe?
+
+```{r}
+x<-seq(-5,10,length=1000)
+y<-seq(-20,20,length=1000)
+z<-outer(x,y,function(x,y) -y^2  + x^3 - 3*x - 1) 
+contour(x,y,z,levels=0, labels="", labcex=0.1)
+lines(xpoints, ypoints)
+x<-seq(-5,10,length=1000)
+y<-seq(-20,20,length=1000)
+z<-outer(x,y,function(x,y) -y^2  + x^3 - 3*x - 1) 
+contour(x,y,z,levels=0, labels="", labcex=0.1)
+lines(x2, y2)
+```
+
+The first graph seems to have a much more organized and uniform network between the points, whereas the second graph is much more sporatic and random with the network of lines.
+
+
+
+## 2. A point such that $2P = \infty$.
+
+Find a point $P \neq \infty$ on the real elliptic curve $y^2 = x^3 - 10x+24$ such that $2P = \infty$. Explain how you know that your answer is correct.
+
+$(-4, 0)$ should be a point where 2P is infinity. According to the formula of m given in the book when p1=p2, if the y value of p is 0, 
+the addition of itself should end up at infinity because the denominator of the m would be zero. 
+
+
+## 3. Order of a point on an elliptic curve
+
+The *order* of a point $P$ on an elliptic curve is the smallest positive integer $n$ such that $nP = \infty$. (The order is infinite if no such integer exists.) For each given point $P$ and real elliptic curve, find the order of $P$. Show how you found your answers.
+
+```{r}
+findInfinity <- function(p, b, c){
+  i <- 1
+  while(1){
+    myPoint <- ecPowReal(b, c, p, i)
+    if(all(is.na(myPoint))){
+      return(i)
+    }
+    i <- i + 1
+  }
+}
+one <- findInfinity(c(0, 16), 0, 256)
+two <- findInfinity(c(.5, .5), .25, 0)
+three <- findInfinity(c(3, 8), -43, 166)
+
+one
+two
+three
+
+
+```
+
+
+1. $P = (0,16)$ on the curve $y^2 = x^3+256$.
+2. $P = \left(\frac{1}{2},\frac{1}{2}\right)$ on the curve $y^2 = x^3 + \frac{1}{4}x$.
+3. $P = (3,8)$ on the curve $y^2 = x^3-43x +166$.
+
+## 4. An elliptic curve recurrence relation
+
+Consider the real elliptic curve $y^2 = x^3 -2x + 10$. Let $P_1$ and $P_2$ be points on this curve in the first quadrant, with $P_1 = (1,y_1)$ and $P_2=(2,y_2)$.
+
+1. Compute $y_1$ and $y_2$.
+
+```{r}
+y1 <- (1^3 - 2 + 10)^.5
+y2 <- (2^3 - 4 + 10)^.5
+y1
+y2
+```
+2. We can define a sequence of points on this elliptic curve using the recurrence relation $P_{i+2} = P_{i+1}+P_{i}$, for $i = 1,2,3,\ldots$, where $P_1$ and $P_2$ are defined as above. Compute $P_1, P_2, \ldots P_{100}$, and let $x_1, x_2, \ldots, x_{100}$ be the $x$-coordinates of these points. List $x_1, x_2, x_3, x_4, x_5$ below.
+```{r}
+  P1 <- c(1, y1)
+  P2 <- c(2, y2)
+  x3 <- vector()
+  y3 <- vector()
+  x3[1] <- P1[1]
+  x3[2] <- P2[1]
+  y3[1] <- P1[2]
+  y3[2] <- P2[2]
+  
+for(i in 3:100){
+  tmpP <-  ecAddReal(-2, 10, P1, P2)
+  x3[i] <- tmpP[1]
+  y3[i] <- tmpP[2]
+  P1 <- P2
+  P2 <- tmpP
+}
+for(i in 1:5){
+  cat("x", i, " is ", x3[i], "\n")
+}
+  
+```
+
+
+3. Let `xpts` be a vector containing the $x$-coordinates $x_1, x_2, \ldots, x_{100}$. Use the `hist(xpts)` command to create a histogram. Do these values appear randomly distributed?
+```{r}
+hist(x3)
+```
+
+No these values don't seem to be randomly distributed.

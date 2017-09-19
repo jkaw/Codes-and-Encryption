@@ -1,0 +1,151 @@
+---
+title: 'Assignment: Linear Codes, Due Wednesday 11/30, 11:59pm'
+author: "Jared Wada"
+date: "November 30, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+library(gmp)
+library(cryptoJKAW)
+```
+
+## 1. Decode using a coset leader syndrome table
+
+The following matrix is a generator matrix for a linear binary code.
+
+```{r}
+bch15 <- matrix(c(1,0,0,0,0,1,1,1,0,1,1,0,0,1,0,
+                  0,1,0,0,0,0,1,1,1,0,1,1,0,0,1,
+                  0,0,1,0,0,1,1,0,1,0,1,1,1,1,0,
+                  0,0,0,1,0,0,1,1,0,1,0,1,1,1,1,
+                  0,0,0,0,1,1,1,0,1,1,0,0,1,0,1),
+                byrow=TRUE, nrow=5)
+```
+
+Answer the following questions, showing the mathematics or calculations that you used to determine your answers.
+
+a. How many codewords are there in this code?
+```{r}
+2^(nrow(bch15))
+```
+
+b. How many errors can this code correct?
+```{r}
+(codeDistance(bch15)-1)/2
+```
+c. How many different syndromes are there?
+```{r}
+length(cosetLeaderSyndromeTable(bch15))
+```
+d. Bob receives the following message. Is it a codeword? If not, decode it to the nearest codeword. How many errors were corrected?
+
+```{r}
+mess <- c(1,0,1,1,0,1,0,0,0,1,0,0,1,1,1)
+clst <- cosetLeaderSyndromeTable(bch15)
+s <- syndrome(mess, parityCheckMatrix(bch15))
+s %in% names(clst)
+n <- match(s, names(clst))
+slook <- clst[[n]]
+as.numeric(xor(slook, mess))
+hammingDistance((as.numeric(xor(slook, mess))), mess) # The number of errors corrected
+
+```
+
+## 2. Decode the Hamming $[63,57]$ code
+
+The following commands compute the parity check matrix for the Hamming $[63,57]$ code. 
+
+```{r}
+m <- 6
+powersOf2 <- 2^(0:(m-1))
+ham63H <- sapply(c(setdiff(1:(2^m-1), powersOf2), powersOf2), 
+                 function(x){as.numeric(intToBits(x)[1:m])})
+
+```
+
+Decode the following message (without computing the entire coset leader syndrome table). In which position was the error? Show your work.
+
+```{r}
+mess <- c(1,1,1,0,0,0,0,0,1,1,0,0,1,0,1,0,1,1,1,0,0,1,0,1,0,0,0,0,0,1,0,1,
+          1,1,0,1,0,1,1,1,0,1,1,0,1,0,1,0,0,0,1,1,0,1,0,0,1,1,1,0,1,0,0)
+syn <- syndrome(mess, ham63H)
+syn <- as.numeric(unlist(strsplit(syn, "")))
+post <- t(ham63H)
+pos <- 0
+for(i in 1:63){
+  if(isTRUE(all.equal(syn, post[i,]))){
+    pos <- i
+    cat("The error position is:", i)
+  }
+}
+mess[pos] <- mess[pos] + 1 %% 2
+mess
+```
+
+## 3. Prove the lemma
+
+Use the fact that $vH^T = \mathbf{0}$ for any codeword $v$ to prove both parts of the following lemma.
+
+> **Lemma.** Let $C$ be a sytematic linear binary code, and let $H$ be its parity check matrix.
+>
+> 1. If $C$ contains a codeword of weight 1, then $H$ contains a zero column.
+> 2. If $C$ contains a codeword of weight 2, then $H$ has two identical columns.
+
+## 4. Build a Golay decoder
+
+The Golay code $G_{24}$ has the following generator matrix.
+
+```{r}
+golay24 <- matrix(c(1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,1,1,1,0,0,0,1,0,
+                    0,1,0,0,0,0,0,0,0,0,0,0,1,0,1,1,0,1,1,1,0,0,0,1,
+                    0,0,1,0,0,0,0,0,0,0,0,0,1,1,0,1,1,0,1,1,1,0,0,0,
+                    0,0,0,1,0,0,0,0,0,0,0,0,1,0,1,0,1,1,0,1,1,1,0,0,
+                    0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,1,1,0,1,1,1,0,
+                    0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,1,1,0,1,1,1,
+                    0,0,0,0,0,0,1,0,0,0,0,0,1,1,0,0,0,1,0,1,1,0,1,1,
+                    0,0,0,0,0,0,0,1,0,0,0,0,1,1,1,0,0,0,1,0,1,1,0,1,
+                    0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,1,0,0,0,1,0,1,1,0,
+                    0,0,0,0,0,0,0,0,0,1,0,0,1,0,1,1,1,0,0,0,1,0,1,1,
+                    0,0,0,0,0,0,0,0,0,0,1,0,1,1,0,1,1,1,0,0,0,1,0,1,
+                    0,0,0,0,0,0,0,0,0,0,0,1,0,1,1,1,1,1,1,1,1,1,1,1),
+                  byrow=TRUE, nrow=12)
+```
+
+a. Use the fact that this code is a linear code to compute its minimum distance. How many errors can this code correct? (Show your work. You probably want to avoid using your `codeDistance` function.)
+
+```{r}
+rowSums(golay24)
+# The minimum distance is 8, because it is the least count of ones among the rows.
+# The # errors it can correct is 3 from (8 - 1) /2
+```
+
+
+b. Use the following code block to compute the coset leader syndrome table for this code. It may take a few minutes, so the following code block is set not to evaluate when this file is knitted. The second line of this code block saves the result to a file so you don't have to do this computation again, in case you need it for a future assignment. Change the path and name of the file `~/Downloads/filename.RData` to something appropriate. How much memory does this table occupy in the R environment? (Look in the environment tab.) How big is the stored file?
+
+```{r, eval=FALSE}
+golayTable <- cosetLeaderSyndromeTable(golay24)
+save(golayTable, file="~/Downloads/filename.RData")
+```
+
+c. Decode the following message. How many errors were corrected?
+
+```{r}
+mess <- c(1,1,1,0,0,0,1,0,1,0,0,0,0,1,0,1,0,0,0,0,1,0,1,1)
+sy <- syndrome(mess, t(golay24))
+sy
+B <- golay24[1:nrow(golay24), 13:ncol(golay24)]
+sy2 <- syndrome(as.numeric(unlist(strsplit(sy, ""))), B)
+e <- c(0,0,0,0,0,0,0,0,0,0,0,0)
+e <- append(e,sy2)
+e <- as.numeric(unlist(strsplit(e, "")))
+ans <- (e + mess) %% 2
+ans
+hammingDistance(ans, mess)
+```
+
+
+
+

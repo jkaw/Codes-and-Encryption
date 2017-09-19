@@ -1,0 +1,270 @@
+---
+title: 'Assignment: Elliptic Curve Cryptography, Due Monday, 11:59pm'
+author: "Jared Wada"
+date: "November 7, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+library(gmp)
+library(cryptoJKAW)
+```
+
+## 1. Is this group cyclic?
+
+Let $E$ be the group defined by the elliptic curve $y^2 = x^3 -3x + 3$ modulo 7.
+
+a. List all the points in $E$. Explain how you know you have found all the points.
+```{r}
+findPoints <- function(b, c, m) {
+  cat("NA, NA\n")
+  for(i in 0:(m-1)){
+    ySquare <- (i^3 + b*i + c) %% m
+    if(ySquare == 0) {
+      cat(i, ", 0\n")
+    }
+    if(powm(ySquare, ((m-1)/2), m) == 1){
+      y1 <- powm(ySquare, ((m+1)/4), m)
+      y2 <- -y1 %% m
+      cat(i, ",", as.character(y1), "\n")
+      cat(i, ",", as.character(y2), "\n")
+    }
+  }
+}
+findPoints(-3, 3, 7)
+
+findNumPoints <- function(b, c, m) {
+  # cat("NA, NA\n")
+  j <- 1
+  for(i in 0:(m-1)){
+    ySquare <- (i^3 + b*i + c) %% m
+    if(ySquare == 0) {
+     # cat(i, ", 0\n")
+      j <- j + 1
+    }
+    if(powm(ySquare, ((m-1)/2), m) == 1){
+      y1 <- powm(ySquare, ((m+1)/4), m)
+      y2 <- -y1 %% m
+     # cat(i, ",", as.character(y1), "\n")
+     # cat(i, ",", as.character(y2), "\n")
+      j <- j + 2
+    }
+  }
+  return(j) # +1 is accounting for NA, NA
+}
+
+
+findInfinity <- function(p, b, c, m){ 
+  i <- 1
+  while(1){ 
+    myPoint <- ecPowModp(b, c, m,  p, i)
+    if(all(is.na(myPoint))){
+      return(i) 
+      break
+    } 
+    i <- i + 1
+  } 
+}
+findOrders <- function(b, c, m) {
+  xVector <- c()
+  yVector <- c()
+  xVector <- append(xVector, NA)
+  yVector <- append(yVector, NA)
+  Orders <- vector()
+  j <- 1
+  for(i in 0:(m-1)){
+    ySquare <- (i^3 + b*i + c) %% m
+    if(ySquare == 0) {
+     # cat(i, ", 0\n")
+      xVector <- append(xVector, i)
+      yVector <- append(yVector, 0)
+    }
+    if(powm(ySquare, ((m-1)/2), m) == 1){
+      y1 <- powm(ySquare, ((m+1)/4), m)
+     # y2 <- -y1 %% m
+     # cat(i, ",", as.character(y1), "\n")
+     # cat(i, ",", as.character(y2), "\n")
+      xVector <- append(xVector, i)
+      yVector <- append(yVector, as.character(y1))
+    }
+  }
+  for(k in 1:length(xVector)){
+    Orders <- append(Orders, findInfinity(c(xVector[k], yVector[k]), b, c, m))
+  }
+  cat(xVector, yVector)
+  return(Orders %% m)
+}
+```
+b. Show that the number of points in $E$ satisifies Hasse's Theorem.
+```{r}
+N <- findNumPoints(-3, 3, 7)
+left <- abs(N-7-1)
+right <- 2*(7^.5)
+left < right
+```
+c. Is the group $E$ a cyclic group? Prove or disprove.
+```{r}
+suppressWarnings(findOrders(-3, 3, 7))
+```
+All of the orders seem to be prime, so this this group is cyclic. Since the negative ones have the same order as the positive roots, I didn't calculate those.
+
+## 2. How about this one?
+
+Let $E$ be the group defined by the elliptic curve $y^2 = x^3 - x$ modulo 71.
+
+a. Show that $E$ contains exactly 72 points.
+```{r}
+
+findNumPoints(-1, 0, 71)
+
+```
+b. Find all the different possible orders of elements in $E$.
+```{r}
+unique(suppressWarnings(findOrders(-1, 0, 71))) 
+
+```
+c. Is $E$ cyclic? Prove or disprove.
+ No, this E is not cyclic. It has a non prime order in it at 4.
+
+## 3. Find a point on a curve
+
+Alice wants to send the message $m = 9230923203240394234$ using a cryptosystem based on the elliptic curve $y^2 = x^3 + 7x + 9$ modulo $p = 34588345934850984359911$. 
+
+a. Show that there is no point of the form $(m, y)$ on this elliptic curve.
+```{r}
+m <- as.bigz("9230923203240394234")
+p <- as.bigz("34588345934850984359911")
+b <- 7
+c <- 9
+ySquared <- powm(m, 3, p) + (b*m) + c
+powm(ySquared, ((p-1)/2), p) == 1
+
+```
+b. Encode $m$ as a point on this curve by adding a digit. That is, find a point of the form $(10m+k, y)$ on this curve, for some value of $k$ between 0 and 9.
+```{r}
+for(i in 0:9) {
+  m <- 10 * m + i
+  ySquared <- powm(m, 3, p) + (b*m) + c
+  if(powm(ySquared, ((p-1)/2), p) == 1) {
+      y1 <- powm(ySquared, ((p+1)/4), p)
+    cat(as.character(m),",", as.character(y1))
+    break
+    }
+}
+
+```
+c. What is the approximate probability that this method (adding a single digit) will fail to produce a point on the curve?
+
+It will be about $$.5 ^{10}$$
+
+
+## 4. Factor using an elliptic curve
+
+Factor the number $2875605016366351$ using Lenstra's method, with an elliptic curve of your choice. Use your `ecPowModp` function. Show your work.
+```{r, eval=FALSE}
+# Think I was supposed to use the actual points? Then pick a new group if it failed?
+Lenstra <- function(N, b, c,P, m){
+  val <- ecAddModp(b, c, m, P, P)
+  for(i in 1:N){
+    val <- ecAddModp(b, c, m, P, val)
+    if(length(val) == 1){
+      asdf <- gcd(val, m)
+      other <- m/asdf
+      return(c(asdf, other))
+    }
+  }
+  return(0)
+}
+a <- 2
+  b <- 5
+while(T){
+if(Lenstra(10000000000000, a, b, c(2,1), 2875605016366351) == 0){
+  a <- a + 1
+  b <- b + 1
+}
+  cat(Lenstra(10000000000000, a, b, c(2,1), 2875605016366351))
+}
+```
+
+## 5. Elliptic curve discrete logarithm
+
+Let $G = (23,14)$ be a point on the elliptic curve $y^2=x^3+4x-12063$ modulo $34543427$. Find $n$ such that $nG = (10735908, 411234)$.
+
+```{r, eval=FALSE}
+# This was going to run for much longer than I wanted to wait, but I'm sure I have the logic correct
+m <- 34543427
+while(TRUE){
+  i <- 1
+  task <- ecPowModp(4, -12063, m, c(23,14), i)
+  if(isTRUE(all.equal(task, c(10735908, 411234)))){
+  cat(i)
+  }
+  i <- i + 1
+}
+```
+
+## 6. Elliptic curve ElGamal
+
+Illustrate the ElGamal cryptosystem on the elliptic curve $y^2=x^3+4x-12063$ modulo $34543427$. Let $\alpha = G = (23,14)$. 
+
+a. Alice wants to send the message $m=20161908$. Find a point $P_m = (m,y)$ on the curve, if possible. If no such point exists, pad $m$ to obtain a point $P_m$ on the curve.
+
+```{r}
+el_Gamal_Function <- function(b, c, mod, message){
+  y2 <- message^3 + b*message + c
+  if(y2 == 0) {
+    cat(message, 0)
+  }
+  if(powm(y2, ((mod-1)/2), mod) == 1) {
+    y1 <- powm(y2, ((mod+1)/4), mod)
+    pm <- c(message, y1)
+    cat(message, as.character(y1))
+  }
+  else{
+    el_Gamal_Function(b,c,mod,message+1)
+  }
+}
+b <- 4
+c <- -12063
+mod <- as.bigz("34543427")
+G <- c(23,14)
+m <- 20161908
+el_Gamal_Function(b, c, mod, m)
+
+```
+b. For his private key, Bob chooses $a = 1945$. What information does Bob publish?
+
+Bob publishes beta(alpha added to itself a times), alpha(a point on the curve), and E(the mod).
+
+c. What message does Alice send?
+
+Alice sends (r,t) where r is alpha added to itself a random k times, and t is beta added itself k times added to a point on the curve including the message
+
+d. Show how Bob can decrypt the message.
+
+Bob can decrypt the message by multiplying r from alice his secret a times. He then adds the ecNeg of that value to the t value
+
+## 7. Elliptic curve Diffie-Hellman
+
+Illustrate the ellptic curve Diffie-Hellman key exchange on the elliptic curve $y^2=x^3+4x-12063$ modulo $34543427$. Let $G = (23,14)$. Suppose Alice's secret number is $N_A = 1984$, and Bob's secret number is $N_B = 2003$.
+
+a. Compute the messages that Alice and Bob send to each other.
+```{r}
+Na <- 1984
+Nb <- 2003
+m1 <- ecPowModp(b,c,mod,G,Na)
+m2 <- ecPowModp(b,c,mod,G,Nb)
+m1
+m2
+
+```
+
+
+b. Compute the shared key.
+```{r}
+m3 <- ecPowModp(b,c,mod,m1,Nb)
+m3
+```
+

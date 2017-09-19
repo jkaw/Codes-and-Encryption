@@ -1,0 +1,160 @@
+---
+title: 'Assignment: Due Monday, 11:59pm'
+author: "Jared Wada"
+date: "September 26, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+```
+
+## 1. Brute force with only 5 keys
+
+For this exercise, you will need to install the R package `digest` from CRAN. See the examples in the notes for how to perform AES encryption and decryption using this package.
+
+Suppose that Eve knows that Alice has encrypted a plaintext block $m$ using AES in ECB mode. Suppose she also knows that Alice used one of the 5 128-bit keys given below, resulting in the ciphertext $c$.
+
+```{r}
+m <- charToRaw("myplaintextblock")
+key1 <- charToRaw("collaborationist")
+key2 <- charToRaw("eigenfrequencies")
+key3 <- charToRaw("greatgrandmother")
+key4 <- charToRaw("lighthousekeeper")
+key5 <- charToRaw("multibillionaire")
+keys <- list(key1, key2, key3, key4, key5)
+c <- charToRaw("U\xa4\x90\020pt\037\xb2\xf8\xfaB`5\xb7$]")
+```
+
+Use the code block below to determine the key. Which key was used?
+
+```{r}
+library(digest)
+## Show your attack here
+for (i in 1:5){
+key <- keys[[i]]
+myAESobject <- AES(key, mode="ECB")
+if(isTRUE(all.equal(myAESobject$encrypt(m),c))){print(rawToChar(key));
+break;
+}
+}
+```
+
+## 2. Use `openssl` to make an ECB mode.
+
+For this exercise, you will need to install the R package `openssl` from CRAN. This package has a function called `aes_cbc_encrypt`, but no function for ECB mode. Use the CBC mode (with an appropriate choice of initial vector) to write a function that encrypts a single 128-bit block in ECB mode. Test your function by comparing it to the ECB mode in the `digest` package.
+
+```{r}
+
+library(openssl)
+## Show ECB function here and test it
+aes_ecb_encrypt <- function(k, pt){
+	return(aes_cbc_encrypt(data = pt, key = k, iv = raw(16))[1:(length(pt))])
+}
+
+m <- charToRaw("myplaintextblock")
+key4 <- charToRaw("lighthousekeeper")
+
+aO = AES(key = key4, mode = "ECB")
+properECBText <- aO$encrypt(m)
+myECBText <- aes_ecb_encrypt(k = key4, pt = m)
+
+if(isTRUE(all.equal.raw(myECBText, properECBText))){
+	print("Success!")
+}else{
+	print("Failure!")
+}
+
+## Show ECB function here and test it
+```
+
+## 3. Practice the Extended Euclidean Algorithm
+
+Use the extended Euclidean algorithm to find the inverse of 7 in $\mathbb{Z}_{30}$. Show the steps of the Euclidean algorithm, show the backsubstitution, and check your answer by multiplying. 
+
+
+$$30 = 7(4) + 2$$
+
+$$7 = 2(3) + 1$$
+
+$$2 = 1(2)$$
+
+Therefore our GCD is 1.
+
+Backsubstitution
+
+$$1 = 7 - 3(2)$$
+
+$$1 = 7 - 3(30 - 7(4))$$
+
+$$30(-3) + (12 + 1)(7) = 1$$
+
+$$1 = 30(-3) + 7(13)$$. 
+
+In $\mathbb{Z}_{30}$, the -3 becomes 27
+
+Check math. 
+
+$$30(27) + 7(13) = 901$$ which leaves 1. 
+
+
+
+## 4. Computing inverses in Galois Fields
+
+Use the extended Euclidean algorithm to find the inverse of $x^2$ in the field $\mathbb{Z}_2[x]/(p(x))$, where $p(x) = x^4+x^3+x^2+x+1$. Show the steps of the Euclidean algorithm, show the backsubstitution, and check your answer by multiplying.
+
+Euclidean algorithm
+
+$${x^4+x^3+x^2+x+1} = x^2(x^2+x+1)+(x+1)$$
+
+$x^2 = (x+1)(x-1) + 1$ The LCD of these two is 1
+
+$$(x+1) = 1(x+1) + 0$$
+
+Backsubstitution
+
+$$1 = x^2 - (x+1)(x-1)$$
+
+$$= x^2 - (x-1)(x^4+x^3+x^2+x+1) - (x^2(x^2+x+1))$$
+
+In the ring $\mathbb{Z}_{2}$ $(x-1) = (x+1)$
+
+$$= x^2 - {(x^4+x^3+x^2+x+1) - (x^2(x^2+x+1))}{(x^4+x^3+x^2+x+1) - (x^2(x^2+x+1))}$$
+
+$$1 = ({x^4+x^3+x^2+x+1}{0}) + ({x^2}(1)$$
+
+This is where I'm not sure where to proceed, but by filling out the inverse table, I found the answer to be $x^3$
+
+## 5. Multiplication Cipher in ECB Mode
+
+Define an encryption function on 4-bit blocks by representing 4-digit bit strings as polynomials in the field of Problem 3, and defining $E(p(x)) = x^2 p(x)$. Encrypt the 3-block string $001101010011$ using this cipher in ECB mode.
+
+$$0011 = x+1$$ 
+
+$$0101 = x^2+1$$
+
+$$0011 = x+1$$
+
+Then multiply each by $x^2$, convert back to binary and append.
+
+$$x^2(x+1) =  x^3+x^2 = 1100$$
+
+$$x^2(x^2+1) = x^3+x+1 = 1011$$
+
+$$x^2(x+1) =  x^3+x^2 = 1100$$
+
+The cipherstring is 110010111100
+
+## 6. Multiplication Cipher in CBC Mode
+
+Define an encryption function on 4-bit blocks by representing 4-digit bit strings as polynomials in the field of Problem 3, and defining $E(p(x)) = x^2 p(x)$. Encrypt the 3-block string $001101010011$ using this cipher in CBC mode, with an initial vector of $1001$. 
+
+
+$$0011 xor 1001 = 1010$$ 
+$$(x^3+x)x^2 = x^5+x^3 = x^3+1 = 1001$$
+$$0101 xor 1001 = 1100$$
+$$(x^3+x^2)x^2 = x^5+x^4 = x^3+x^2+x = 1110$$
+$$0011 xor 1110 = 1101$$ 
+$$(x^3+x^2+1)x^2 = x^3+x = 1010$$
+The encrypted string is 100111101010

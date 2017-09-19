@@ -1,0 +1,154 @@
+---
+title: 'Assignment: Due Monday, 11:59pm'
+author: "Chris Betsill"
+date: "October 2, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+library(gmp)
+library(cryptoCTB)
+```
+
+## 1. Factoring $pq$ when $p$ and $q$ are nearby primes.
+
+Consider the following (composite) number.
+
+```{r}
+bigComp <- as.bigz("41495155688809929585124078636911611510124462322424
+                   368999956573296906528114129081463997081530206029675
+                   796566441088639070653584409712811422453347196222375
+                   13761725653531896260925123613")
+
+fermatTest(bigComp, 8)
+
+ceiling(log10(bigComp))
+log2(bigComp)
+```
+
+a. In the codeblock above, check that this number is composite by using your Fermat test.
+b. In the codeblock above, find the number of digits in this number and the number of bits using logs.
+c. Notice that the square of the following number is close to `bigComp`.  Use this information, and the fact that the factors of `bigComp` are approximately the same size, to factor `bigComp`. Show your code in the codeblock below.
+   
+```{r}
+sqRoot <- as.bigz("2037035976334486086268445688409378161051468393665936250636140449354381299763336706183397647")
+
+i <- sqrt(as.numeric((sqRoot*sqRoot) - bigComp))
+print(i)
+
+p <- sqRoot + i
+q <- sqRoot - i
+
+print(p)
+print(q)
+
+if(p*q == bigComp){
+  print("It worked")
+}
+```
+
+## 2. Find a pseudoprime that is not strong
+
+Use your Fermat primality test to find all of the pseudoprimes between 1000 and 10000 for the base 7. Use the `isprime` function to determine that your pseudoprimes are composite.
+
+```{r}
+for(i in 1000:10000){
+  if(fermatTest(i, 7) == TRUE && isprime(i, reps = 40) == 0){
+    print(i)
+  }
+}
+```
+
+
+## 3. Quick power calculation
+
+Let $a$ be an integer. Suppose you have a calculator that can only perform the operations of squaring and multiplying. Show (using algebra) that you can calculate $a^{257}$ using only five calculator operations.
+
+$$
+a*a = a^2\\
+(a^2)^2 = a^4\\
+(a^4)^2 = a^8\\ 
+(a^8)^2 = a^{16}\\
+(a^{16})^2 = a^{32}\\
+(a^{32})^2 = a^{64}\\
+(a^{64})^2 = a^{128}\\
+(a^{128})^2 = a^{256}\\
+(a*a^{256}) = a^{257} 
+$$
+## 4. Timing the `factorize` function
+
+The `gmp` library has a function called `factorize` which will attempt to factor a large number. In R, you can see how long a command takes by using the `system_time` function:
+
+```{r}
+system.time(factorize(as.bigz("74534598735433245597")))
+```
+
+Use this command to determine the time it takes to factor the following numbers, each of which is a product of large primes. Are these times increasing linearly with the number of digits? If not, how are these times increasing?
+
+``` {r}
+
+numlist <- list(as.bigz("221073920338411049151031"),as.bigz("1326443525118841866260617"),as.bigz("7958661137742004364881321"),as.bigz("47751966754183036233218137"),as.bigz("286511800375000558445327027"), as.bigz("1719070802400095237189887909"),as.bigz("10314424803143471989157992487"),as.bigz("61886548794995775301998344653"),as.bigz("371319292755115219695668554559"))
+x <- list()
+y <- list()
+for(i in 1:length(numlist)){
+  x[[i]] <- ceiling(log10(numlist[[i]]))
+  y[[i]] <- system.time(factorize(numlist[[i]]))[1]
+}
+
+plot(x,y,xlab = "Number of Digits", ylab = "Time (s)")
+
+#There appears to be no strict correlation between the number of digits and the functions runtime, 
+#however it does spike at the end.
+```
+
+## 5. Short plaintext attack
+
+```{r}
+rsaMod <- as.bigz("2270785812851607857752236173866598165780980999480087
+                  96470995669001062758570837819275351571519690240251463
+                  92877047548296429131296960565225703131554564424303895
+                  83920197030931790925387823837277203838574301774350132
+                  42444504076066258379017983988851994235746436107443245
+                  62528276931827066473866615454887905670524424503707688
+                  92681879411999393643108663016006507255489833947310000
+                  87923251226854295095181659541311283989229588168697957
+                  58667406044391829713985703446445013454864090920545268
+                  59941485219860927547608296980025433657621871715162467
+                  84071119823459209996599672653802424029963364148197234
+                  56853027238543378738028207982298417")
+rsaExp <- as.bigz("65537")
+c <- as.bigz("128216972055960183378721787714469111306799737814971002198
+             6229586389359344497658184213712429285822188549926995588183
+             3237258784376795565986432565955032055406700435350884952772
+             8327573356968001432140335916137748548203476259553293133733
+             6984514346587698999980727268439793304759211907286227159763
+             8991440842731415663378367587187983360075334687571117158156
+             7251718603971567669618892639720277733050807370950305289557
+             6032600301346639961168091352569266230799971665474413926527
+             4217957686818400851397262197048091402851157186436667777674
+             1004576470040519183572125063272357752504338431403925758867
+             97119952853745267282047381070641950241")
+list1 <- list()
+list2 <- list()
+X <- 0
+Y <- 0
+for(x in 1:10**9){
+  list1[[x]] <- c*powm(x,-rsaExp, rsaMod)
+  list2[[x]] <- powm(x, rsaExp, rsaMod)
+  same <- intersect(list1, list2)
+  if(length(same) != 0){
+    X<-match(same, list1)
+    Y<-match(same, list2)
+    break
+  }
+}
+print(list1[[X]])
+print(list2[[Y]])
+bigzToString(X*Y)
+```
+
+In the code block above, conduct a short plaintext attack to find the plaintext that produced the ciphertext `c`. (Follow the procedure on page 172 of [T].)
+
+

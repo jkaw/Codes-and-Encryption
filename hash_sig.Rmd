@@ -1,0 +1,169 @@
+---
+title: 'Assignment: Due Monday, 11:59pm'
+author: "Jared Wada"
+date: "October 24, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+library(gmp)
+library(openssl)
+library(cryptoJKAW)
+```
+
+## 1. Birthday Theorem examples
+
+1. Assuming that Social Security numbers behave as a random oracle, what is the probability that at least two people in a group of 350 have the same last four digits of their SSN's? Compute the answer exactly and approximately, using the formulas given in the Birthday Theorem.
+```{r}
+possibilities <- 10000
+total <- 10000 - 349
+p <- as.numeric("1")
+for(i in total:9999){
+  p <- p * as.numeric(i/possibilities)
+}
+ans <- (1 - p)
+ans
+
+r <- 350
+n <- 20000
+e <- exp(1)
+
+a <- 1 - e^((-(r^2))/n)
+a
+
+
+```
+2. Approximately how many messages would have to be hashed to do a birthday attack on SHA-256 that has a probability of 0.25 of succeeding? (Use the Birthday Theorem.)
+
+
+```{r}
+library(gmp)
+
+x <- log(.75)
+w <- log(1)
+y <- pow.bigz(as.bigz("2"), as.bigz("257"))
+p <- as.numeric(w-x) * as.numeric(y)
+z <- p^.5
+cat(z)
+
+```
+
+
+
+
+
+3. Approximately how many messages would have to be hashed to do a birthday attack on SHA-256 that has a probability of 0.99 of succeeding? (Use the Birthday Theorem.)
+
+```{r}
+library(gmp)
+
+x <- log(.01)
+p <- as.numeric(w-x) * as.numeric(y)
+z <- p^.5
+cat(z)
+
+```
+
+
+
+
+
+
+## 2. Find a collision 
+
+Find a collision for your hash function `miniSHA`. That is, find two strings `x1` and `x2` such that `miniSHA(x1)` equals `miniSHA(x1)`. Use a birthday attack with randomness (everyone should get different answers). Do your work in a separate R script, outside of this file and your project. Once you find the collision, show the code that you used for the attack below, along with the strings that you found.
+
+```{r, eval=FALSE}
+# show your code here, but don't execute it here
+library(random)
+i <- 22
+stringa <- "abc123_townshend 20"
+
+collision <- function(){
+  while(1) {
+    stringb <- "abc123_townshend "
+    
+    stringb <- paste(stringb, i)
+    #cat(stringa)
+    #cat(stringb)
+    if(miniSHA(stringa) == miniSHA(stringb)) {
+      cat(sprintf("%s and %s are a match\n", stringa, stringb))
+      cat(sprintf("%s", miniSHA(stringa)))
+      break
+    }
+    i <- i + 1
+  }
+}
+collision()
+
+
+# Produces abc123_townshend 20 and abc123_townshend  151872 are a match
+# they matching hash is26b4
+```
+
+
+## 3. Find a document with the same hash
+
+Suppose Alice and Bob are using a signature scheme using the SHA-1 hash function, but instead of using the whole hash, they are just using the first two bytes of the SHA-1 hash. Bob sends the following message to Alice to sign.
+```{r}
+m1 <- "On the first day of 2017, I agree to pay Bob five dollars."
+```
+
+Explain how Bob could modify the following message `m2` to have the same two-byte hash as `m1` by adding no more than 16 additional whitespace characters between the words. Your answer should explain why Bob is guaranteed to find a collision. (Apply the Pigeonhole Principle.)
+
+```{r}
+m2 <- "On the first day of 2017, I agree to pay Bob one million dollars in small unmarked bills."
+```
+
+
+To get the similar two byte hash, he has to find a random hash for those two bytes, which could be any combination two 16 bit strings.
+So the total amount of things he has to collide with is $16^2$ or $256$.
+To modify the string by only adding whitespace between words with 16 whitespaces we do the calculation c(32, 16). 
+This number is much, much greater than 256, just by looking, and so there should definitely be more than one "pigeon" per hole.
+Thus a collision is guarenteed to be found.
+
+## 4. Find a multicollision
+
+Let $p = 95394590839549803540983759$. Consider the hash function $h(x)=x^2 \bmod p$, defined on the set of natural numbers. Find five different messages (i.e., numbers) that have the same hash. (Multiple collisions are called *multicollisions*.)
+```{r}
+p <- as.bigz("95394590839549803540983759")
+additive <- 777
+powm((p+additive), 2, p)
+powm((2*p + additive), 2, p)
+powm((3*p+additive), 2, p)
+powm((4*p+additive), 2, p)
+powm((5*p + additive), 2, p)
+```
+
+This works beacuse the hash function is so simple. You can just add the modulus to a number and then muliply that mod a few times to get the same exact hash. 
+
+
+## 5. Authenticated Encryption
+
+Suppose Alice and Bob both have public encryption functions $E_A$ and $E_B$, and private decryption functions $E_A^{-1}$ and $E_B^{-1}$. Let $m$ be a message that Alice wants to send to Bob. Alice sends $c = E_B(E_A^{-1}(m))$. Then Bob applies $E_A(E_B^{-1}(c))$.
+
+1. Explain why Alice has access to the functions she used and Bob has access to the functions he used.
+
+Alice has Bob's public $E_B$ and her own $E_A^{-1}$, so she can obviously send c, while providing her own m.
+Bob can do his application because he has access to Alice's public $E_A$ and his own private $E_B^{-1}$.
+This is how public encrytion functions work.
+
+2. What will be the result of Bob's calculation?
+
+Bob will decrypt c into the original message m.
+
+3. Could anyone other than Alice have sent the message? How does Bob know?
+
+No, because based on how public encryption works, only Alice should have the private key to encrypt the message properly, if Bob decrypted a coherent message.
+
+4. Could anyone other than Bob have received (and decrypted) this message?
+
+No, because they would also need Bob's private key. They could intercept it, but without Bob's key, it would be useless.
+
+5. Make this algorithm into an authenticated encryption scheme using RSA. Since Alice and Bob both need private and public keys, start by making both Alice and Bob do steps 1 through 4 of the RSA algorithm (p. 165) to get $n_A, n_B$, etc. Then explain what Alice sends and what Bob does.
+
+Alice and Bob both pick big primes p and q, and keep them as part of their own secret keys. They then calculate their own public n values.
+Next they both pick an exponent e, also a public value. They then calculate their own private d values equal to the inverse of e in p-1. Since both peoples' n and e values are now public they can now do the authentification. Alice and Bob can each encrypt a message using each other's public n and e values and ask the other person to decrypt using their respective private d, p, and q values and verify that the message was correct.
+

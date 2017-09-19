@@ -1,0 +1,63 @@
+---
+title: 'Assignment: Error-Control Codes, Due Wednesday, 11:59pm'
+author: "Jared Wada"
+date: "November 16, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+library(gmp)
+library(cryptoJKAW)
+```
+
+## 1. New ISBN numbers
+
+In 2007, a new ISBN-13 system was introduced. The check digit $a_{13}$ is chosen so that
+$$
+a_1 + 3a_2 + a_3 + 3a_4 + a_5 + 3a_6 + a_7 + 3a_8 + a_9 +3a_{10} + a_{11} + 3a_{12} = 0
+$$
+in $\mathbb{Z}_{10}$.
+
+a. Show (by finding an example), that it is possible to transpose two adjacent digits without changing the check digit.
+
+If you have a1 equal to 3 and a2 equal to 3, you could switch the two and get the same check digit.
+
+b. Show (by example), that it is possible to change a single digit without changing the check digit.
+
+If this is all mod 14, then you can add 14 to any digit and get the same check digit. 
+
+## 2. Code rate
+
+Compute the code rate for the Two-Dimensional Parity Check code discussed in the notes. Explain your computation.
+```{r}
+log2(5)/5
+```
+
+If that is all the codewords, then I just took the length of each code word, and the total number of columns, and plugged them into the equation.
+
+## 3. Hamming $[7,4]$ code words
+
+The following example illustrates how matrices are declared and multiplied in R. You can just use regular numeric variables (not `raw` or `bigz`), and the modulo operator `%%` works on matrices.
+
+```{r}
+## Matrix examples
+rowVec <- c(1,2,3)
+M <- matrix(c(1,1,0,2,3,4, 0,1,2,1,1,4, 3,0,0,1,3,1), nrow=3, byrow=TRUE)
+rowVec %*% M
+as.vector(rowVec %*% M)
+```
+
+Compute all of the Hamming $[7,4]$ code words using matrix multiplication in $R$. Represent the matrix $G$ on page 395 as a matrix, then get the code words by multiplying by the 16 different row vectors.
+
+```{r}
+Ham74 <- matrix(c(1,0,0,0,1,1,0,0,1,0,0,1,0,1,0,0,1,0,0,1,1,0,0,0,1,1,1,1), nrow = 4, byrow = TRUE)
+vecs <- expand.grid(0:1, 0:1, 0:1, 0:1)
+for(i in 1:16){
+  cat(as.numeric(as.vector(expand.grid(0:1, 0:1, 0:1, 0:1)[i,])) %*% Ham74 %% 2, "\n")
+}
+generateCode(Ham74) # check if it is equal
+```
+
+

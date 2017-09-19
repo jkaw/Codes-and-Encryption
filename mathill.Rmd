@@ -1,0 +1,73 @@
+
+---
+title: 'Assignment: Due Wednesday, 11:59pm'
+author: "Jared Wada"
+date: "September 14, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+```
+
+## 1. Matrix inverses in $M_n(\mathbb{Z}_{26})$.
+
+In $M_2(\mathbb{Z}_{26})$, compute the inverse of the matrix $\begin{bmatrix} 3 & 2 \\ 2 & 5\end{bmatrix}$ using Gaussian elimination. Show all the steps below, one row operation at a time. The first step is done for you, and the second step is formatted with question marks so you can figure out how the code works. Complete the second step, and add additional steps as necessary.
+$$
+\begin{aligned}
+& 
+\left[\begin{array}{cc|cc}
+3 & 2 & 1 & 0 \\
+2 & 5 & 0 & 1
+\end{array}\right] \\
+\sim &
+\left[\begin{array}{cc|cc}
+1 & 18 & 9 & 0 \\
+2 & 5 & 0 & 1
+\end{array}\right] 
+&
+R_1 \leftarrow 9R_1 \\
+\sim &
+\left[\begin{array}{cc|cc}
+13 & 0 & 13 & 0 \\
+2 & 5 & 0 & 1
+\end{array}\right] 
+&
+? \leftarrow ? \\
+\end{aligned}
+$$
+
+## 2. Dependence Relations in $\mathbb{Z}_2^3$
+
+Let $\mathbf{w} = (1,0,1)$, $\mathbf{x} = (0,1,0)$, $\mathbf{y} = (0,1,1)$, and $\mathbf{z} = (1,1,0)$ be vectors in $\mathbb{Z}_2^3$. Find a dependence relation on these vectors, using scalars in the ring $\mathbb{Z}_2$. Write your dependence relation below, replacing the question marks with the scalars that you found.
+$$
+?\mathbf{w} + ?\mathbf{x} + ?\mathbf{y} + ?\mathbf{z} = \mathbf{0} 
+$$
+
+## 3. Using the Hill Cipher
+
+```{r}
+stringToMod26 <- function(x) {utf8ToInt(x)-utf8ToInt("a")}
+mod26ToString <- function(x) {intToUtf8(x+utf8ToInt("a"))}
+
+hillCipher <- function(txt, keyMatrix) {
+  pt <- stringToMod26(txt)
+  n <- attributes(keyMatrix)$dim[2]
+  suppressWarnings(
+    mPtxt <- matrix(pt,nrow=n) # repeats text so length is a multiple of n
+  )
+  mCtxt <- (keyMatrix %*% mPtxt) %% 26
+  return(mod26ToString(as.vector(mCtxt)))
+}
+
+key <- matrix(c(1,4,11, 2,5,9, 3,6,8), nrow = 3, ncol = 3);
+hillCipher("whathappensifyouchangeoneletteroftheplaintext", key)
+```
+
+Show, by example, that changing one letter of plaintext can change more than one letter of ciphertext. Use the code block below.
+```{r}
+# put your code in this code block
+```
+
+

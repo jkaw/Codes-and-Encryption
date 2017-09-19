@@ -1,0 +1,196 @@
+---
+title: 'Assignment: Due Wednesday, 11:59pm'
+author: "Jared Wada"
+date: "September 28, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+library(gmp)
+```
+
+## 1. Multiplication Cipher in CTR Mode
+
+Define an encryption function on 4-bit blocks by representing 4-digit bit strings as polynomials in the field of Problem 3, and defining $E(p(x)) = x^2 p(x)$. Encrypt the 3-block string $001101010011$ using this cipher in CTR mode, with an initial vector of $1001$. (For the purposes of this problem, let $L_8$ be the identity function.) Show all work. (Warning: The counter in CTR mode uses binary addition, while the $\oplus$ operation corresponds to addition in the field. These are different operations. For example, in this problem, $X_1 = 1001$, so $X_2 = 1001+1=1010$. As elements of the field, these bit strings correspond to $X_1 = x^3+1$ and $X_2 = x^3+x$.)
+
+Three byte blocks are 0011, 0101, 0011. 
+
+The encryption function is $E(p(x)) = x^2 p(x)$
+
+The initial vector is 1001.
+
+\begin{center}Block 1 \end{center}
+
+$$X_1 \times x^2$$
+
+$$1001\times x^2 = x+1\times x^2 = x^5+x^2 = 1 + x^2 = 0101$$
+
+$$C_1 = X_1 \oplus B_1$$
+
+$$0101 \oplus 0011 = 0110$$
+
+$$C_1 = 0110$$
+
+$$1001 + 1 = 1010$$
+
+$$X_2 = 1010$$
+
+\begin{center}Block 2\end{center}
+
+$$X_2 \times x^2$$
+
+$$1010\times x^2 = (x^3+x)\times x^2 = x^5+x^3 = x^3 + 1 = 1001$$
+
+$$C_2 = X_2 \oplus B_2$$
+
+$$1001 \oplus 0101 = 1100$$
+
+$$C_2 = 1100$$
+
+$$1010 + 1 = 1011$$
+
+$$X_3 = 1011$$
+
+\begin{center}Block 3 \end{center}
+
+$$X_3 \times x^2$$
+
+$$1011\times x^2 = (x^3+x+1)\times x^2 = x^5+x^3+x^2 = x^3+x^2+1 = 1101$$
+
+$$C_3 = X_3 \oplus B_3$$
+
+$$1101 \oplus 0011 = 1110 $$
+
+$$C_3 = 1110$$
+
+Then encryption string is $011011001110$.
+
+
+
+
+
+## 2. Encrypt using RSA
+
+In the code block below, encrypt the integer message using the RSA algorithm, with the given modulus and exponent.
+
+```{r}
+
+#' Convert string to big integer
+#'
+#' Converts a string to a bigz integer. First the characters of the string are converted to raw, then the
+#' raw (hexadecimal) vector is converted to an integer, where the place values of this vector are assigned
+#' from right to left.
+#'
+#' @param txt A character string
+#'
+#' @return A `bigz` integer
+#' @export
+#'
+#' @examples
+#' stringToBigz("A string, which may contain punctuation.")
+stringToBigz <- function(txt) {
+  nraw <- charToRaw(txt)
+  l <- length(nraw)
+  return(sum(as.bigz(256)^(l-(1:l))*as.numeric(nraw)))
+}
+
+#' Convert (some) big integers to strings
+#'
+#' This function is intended to serve as an inverse to the \code{\link{stringToBigz}} function.
+#' If the raw representation of `n` contains 00's, this function will produce an
+#' `embedded nul in string` error. Thus it is not suitable for all integers.
+#'
+#' @param n A `bigz` integer, whose raw representation must not contain 00's
+#'
+#' @return A character string
+#' @export
+#'
+#' @examples
+#' stringAsInt <- stringToBigz("Any string.")
+#' bigzToString(stringAsInt)
+#' # bigzToString(256^3+256) # embedded nul error!
+bigzToString <- function(n) {
+  numbytes <- ceiling(log2.bigz(n)/8)
+  nnumeric <- numeric(numbytes)
+  for(i in 0:(numbytes-1)) {
+    b <- as.numeric(mod.bigz(n, 256))
+    n <- divq.bigz(n, 256)
+    nnumeric[numbytes-i] <- b
+  }
+  return(rawToChar(as.raw(nnumeric)))
+}
+library(gmp)
+rsaModulus <- as.bigz("195788142788358164233804492957398488634726254
+80010690459681625329893085627204988093818307212739677049956352567177
+87746099255774603493751657981591279103676377321834690778523173801439
+56666453740761405761559112081931710294389007965357426686841571207915
+63250256451028748849392888561065149545396193209901120150922222695733
+85885218236653180615298633266570810577713313325153177729917576091579
+04367035499790847594316987574068066165228272596810445659823407499566
+73617955415896513151098470897855653135143572581766041083134024184173
+37290933287861015998551958245267490476692680563890349711670121990426
+2326557198534825303109914717")
+rsaExponent <- as.bigz("65537")
+rsaMessage <- as.bigz("453787497332492283997614676595994471")
+
+gcd.bigz(rsaExponent, rsaModulus) #Just checking the gcd is 1
+
+encryption <- mod.bigz(pow.bigz(rsaMessage, rsaExponent), rsaModulus)
+print(encryption)
+```
+
+Notice that, for this example, the ciphertext number has many more digits than the plaintext number. Will the RSA ciphertext always be longer than the plaintext? Explain.
+
+The ciphertext will only have more digits if the chosen modulus has more digits than the plaintext.
+This should be obvious, and the modulus will circle the number within itself. 
+However, the modulus should be the product of two very large prime numbers, so unless the plaintext is very long, 
+the ciphertext should be longer than the plaintext. 
+
+## 3. Decrypt using RSA
+
+Suppose that the following ciphertext (number) was encrypted using RSA with the modulus and exponent from Problem 2. 
+
+```{r}
+rsaCiphertext <- as.bigz("16053542953097522034129794649814372515869362991732174439829
+3776550795524368337578956746793355042030038205926539079142418490671465617605065354907
+4846969694778601218848152236677611918504345262491414443232089922643358336946362484478
+7840597302531115865062721545459882263488079496144532695399516588916034043077740431329
+3679140154219046246386812621840178092960797765021778623868350200999052841894073701215
+5233606208746477785068289264069257218137457317674139071451943085300805611973907560305
+7844509912461437119592469825499225257447545934250164343715835969613074707612423475222
+013041220244987344227734563376080328735796169508")
+```
+
+Decrypt. You will need to use the fact that the modulus is the product of the two primes given below. Show the required calculations in the code block below. Use the `bigzToString` function to recover the original ciphertext.
+
+```{r}
+prime1 <- as.bigz("144911861660469186676135294469223926436941190769646690446708204735
+8736042802470485903802764162570319046524677116495722587569335044623035240248379011509
+3185063138983627389612280537711144526516541647238439825051192285576632558346504222927
+4390742421922958707226985795059825145780503339835934302622599390902434169")
+prime2 <- as.bigz("135108431114557702161176938735198129586127410854075454085216219632
+8196814775832631024605026656139919348031710417226631499441380055668631715847496632676
+0910748676123466333816030590962886084101772115154314805240281171448508474907855212648
+7326570961868801681549328707734385122713774204115903767411319701066873093")
+
+#Storing this value as it is used in multiple steps
+factor <- mul.bigz(sub.bigz(prime1, 1), sub.bigz(prime2, 1)) 
+
+#Finding the inverse of e
+gcdex(rsaExponent,mul.bigz(sub.bigz(prime1, 1), sub.bigz(prime2, 1)))
+
+#Finding the value of d, the inverse of e mod (prime1-1*prime2-1)
+d <-mod.bigz(gcdex(rsaExponent,factor)[2], factor)
+
+#Checking to see if d*e is 1 mod N
+ mod.bigz(mul.bigz(d, rsaExponent), factor)
+ 
+ #Running the decryption
+ plaintext <- bigzToString(powm(rsaCiphertext, d, rsaModulus))
+ 
+ plaintext
+
+```
+
